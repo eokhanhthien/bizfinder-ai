@@ -96,8 +96,11 @@ const App: React.FC = () => {
 
   // --- Handlers ---
 
-  const saveCurrentSession = useCallback(() => {
-    if (searchState.data.length === 0) return;
+  const saveCurrentSession = useCallback((providedData?: Business[]) => {
+    // Allow saving provided data (e.g., immediate update from Load More) or current state data
+    const dataToSave = providedData || searchState.data;
+    
+    if (dataToSave.length === 0) return;
 
     setHistory(prev => {
       // 1. If we are working on an existing history item, UPDATE it.
@@ -108,12 +111,10 @@ const App: React.FC = () => {
           updatedHistory[existingItemIndex] = {
             ...updatedHistory[existingItemIndex],
             timestamp: Date.now(),
-            count: searchState.data.length,
-            data: searchState.data,
+            count: dataToSave.length,
+            data: dataToSave,
             // We do NOT update industry/location labels here to prevent renaming 
             // the history item if the user just changed inputs but is saving old context.
-            // Exception: If you really want to support renaming, you'd need smarter logic,
-            // but for "Load More", keeping the original search query name is usually correct.
           };
           return updatedHistory;
         }
@@ -125,8 +126,8 @@ const App: React.FC = () => {
         timestamp: Date.now(),
         industry: industry || 'Unknown Industry',
         location: mainLocation || 'Unknown Location',
-        count: searchState.data.length,
-        data: searchState.data
+        count: dataToSave.length,
+        data: dataToSave
       };
       
       return [newItem, ...prev];
@@ -155,6 +156,13 @@ const App: React.FC = () => {
   };
 
   const handleRestoreHistory = (item: HistoryItem) => {
+    // PREVENT SELF-RELOAD: If clicking the currently active session, just close the sidebar.
+    // This avoids overwriting your current progress (like "Load More" results) with the potentially stale version in the list.
+    if (currentHistoryId === item.id) {
+        setIsSidebarOpen(false);
+        return;
+    }
+
     // Save current work before switching
     if (searchState.data.length > 0) {
        saveCurrentSession();
@@ -223,8 +231,7 @@ const App: React.FC = () => {
 
   const handleLoadMore = async () => {
     setIsLoadingMore(true);
-    // CRITICAL FIX: Do NOT reset currentHistoryId here. 
-    // We want to continue the current session so that "End Session" updates the existing history item.
+    // CRITICAL: We do NOT reset currentHistoryId here. We want to update the existing session.
     
     try {
       const existingNames = searchState.data.map(b => b.name);
@@ -243,7 +250,14 @@ const App: React.FC = () => {
           const key = biz.googleMapsUri || `${biz.name}|${biz.address}`;
           if (!currentMap.has(key)) { currentMap.set(key, biz); addedCount++; }
       });
-      setSearchState(prev => ({ ...prev, data: Array.from(currentMap.values()) }));
+      
+      const mergedData = Array.from(currentMap.values());
+      setSearchState(prev => ({ ...prev, data: mergedData }));
+      
+      // AUTO-SYNC HISTORY: Update the history record immediately so the sidebar count (e.g., 40 -> 60) reflects the new data.
+      if (currentHistoryId) {
+        saveCurrentSession(mergedData);
+      }
       
       if (addedCount === 0) {
          // Soft notification instead of harsh error

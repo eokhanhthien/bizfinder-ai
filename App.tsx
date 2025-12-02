@@ -81,53 +81,77 @@ const App: React.FC = () => {
 
   // --- Handlers ---
 
-  const addToHistory = (currentData: Business[], currentIndustry: string, currentLocation: string) => {
-    if (currentData.length === 0) return;
-    
-    const newItem: HistoryItem = {
-      id: Date.now().toString(),
-      timestamp: Date.now(),
-      industry: currentIndustry || 'Unknown Industry',
-      location: currentLocation || 'Unknown Location',
-      count: currentData.length,
-      data: currentData
-    };
+  const saveCurrentSession = useCallback(() => {
+    if (searchState.data.length === 0) return;
 
-    setHistory(prev => [newItem, ...prev]);
-  };
+    setHistory(prev => {
+      // 1. If we are working on an existing history item, UPDATE it.
+      if (currentHistoryId) {
+        const existingItemIndex = prev.findIndex(item => item.id === currentHistoryId);
+        if (existingItemIndex !== -1) {
+          const updatedHistory = [...prev];
+          updatedHistory[existingItemIndex] = {
+            ...updatedHistory[existingItemIndex],
+            timestamp: Date.now(),
+            count: searchState.data.length,
+            data: searchState.data,
+            // We do NOT update industry/location labels here to prevent renaming 
+            // the history item if the user just changed inputs but is saving old context.
+            // Exception: If you really want to support renaming, you'd need smarter logic,
+            // but for "Load More", keeping the original search query name is usually correct.
+          };
+          return updatedHistory;
+        }
+      }
+
+      // 2. Otherwise, CREATE a new history item.
+      const newItem: HistoryItem = {
+        id: Date.now().toString(),
+        timestamp: Date.now(),
+        industry: industry || 'Unknown Industry',
+        location: mainLocation || 'Unknown Location',
+        count: searchState.data.length,
+        data: searchState.data
+      };
+      
+      // We also update the current ID to track this new item immediately
+      // This side-effect inside setState callback is safe for logic but setCurrentHistoryId 
+      // should ideally be called outside. However, since this is "save", we might be clearing right after.
+      // But if we are NOT clearing (e.g. auto-save), we need to know we are now tracking this ID.
+      // We'll handle setCurrentHistoryId separately if needed, but for "End Session" it doesn't matter.
+      return [newItem, ...prev];
+    });
+  }, [searchState.data, currentHistoryId, industry, mainLocation]);
 
   const handleClearData = () => {
-    // 1. Save to history ONLY if it's a new session (currentHistoryId is null)
-    if (searchState.data.length > 0 && currentHistoryId === null) {
-      addToHistory(searchState.data, industry, mainLocation);
-    }
+    // Save/Update current session before clearing
+    saveCurrentSession();
 
-    // 2. Clear Search State
+    // Clear Search State
     setSearchState({ isSearching: false, error: null, data: [], hasSearched: false, progress: undefined });
     localStorage.removeItem('bizFinder_data');
     
-    // 3. Reset Inputs & Tracker
+    // Reset Inputs & Tracker
     setMainLocation('');
     setIndustry('');
-    setCurrentHistoryId(null); // Reset tracking
+    setCurrentHistoryId(null);
     localStorage.removeItem('bizFinder_industry');
     localStorage.removeItem('bizFinder_location');
 
-    // 4. UI Updates
+    // UI Updates
     setShowAnalytics(false);
-    // CRITICAL: Keep sidebar OPEN so user sees the history appear instantly
     setIsSidebarOpen(true); 
   };
 
   const handleRestoreHistory = (item: HistoryItem) => {
-    // If we have unsaved NEW data currently, save it before restoring old one
-    if (searchState.data.length > 0 && currentHistoryId === null) {
-       addToHistory(searchState.data, industry, mainLocation);
+    // Save current work before switching
+    if (searchState.data.length > 0) {
+       saveCurrentSession();
     }
 
     setIndustry(item.industry);
     setMainLocation(item.location);
-    setCurrentHistoryId(item.id); // Mark this session as belonging to this history ID
+    setCurrentHistoryId(item.id);
     
     setSearchState({
       isSearching: false,
@@ -136,17 +160,12 @@ const App: React.FC = () => {
       hasSearched: true,
       progress: undefined
     });
-    setIsSidebarOpen(false); // Close sidebar to show results
+    setIsSidebarOpen(false);
   };
 
   const handleDeleteHistory = (id: string, e: React.MouseEvent) => {
-    // Stop propagation to prevent opening the history item
     e.stopPropagation();
-    
-    // Immediate deletion for better UX - removing confirmation dialog
     setHistory(prev => prev.filter(item => item.id !== id));
-    
-    // If we deleted the currently active history item, treat current session as new (so it can be re-saved if needed)
     if (currentHistoryId === id) {
       setCurrentHistoryId(null);
     }
@@ -156,7 +175,6 @@ const App: React.FC = () => {
     if (history.length === 0) return;
     if (window.confirm("Are you sure you want to clear all search history?")) {
       setHistory([]);
-      // If we are currently viewing a history item, detach it since it no longer exists in history
       if (currentHistoryId) {
         setCurrentHistoryId(null);
       }
@@ -170,12 +188,12 @@ const App: React.FC = () => {
       return;
     }
     
-    // If there is existing NEW data, save to history before new search overwrites it
-    if (searchState.data.length > 0 && currentHistoryId === null) {
-       addToHistory(searchState.data, industry, mainLocation); 
+    // Save previous session before starting a fresh search
+    if (searchState.data.length > 0) {
+       saveCurrentSession();
     }
 
-    // Reset history ID because this is a FRESH search
+    // Start FRESH session for new search
     setCurrentHistoryId(null);
 
     setSearchState(prev => ({ ...prev, isSearching: true, error: null, hasSearched: true, progress: { current: 1, total: 1, currentArea: mainLocation } }));
@@ -185,12 +203,12 @@ const App: React.FC = () => {
     } catch (error: any) {
       setSearchState(prev => ({ ...prev, isSearching: false, error: error.message || "An unexpected error occurred", progress: undefined }));
     }
-  }, [industry, mainLocation, searchState.data, currentHistoryId]);
+  }, [industry, mainLocation, searchState.data, saveCurrentSession]);
 
   const handleLoadMore = async () => {
     setIsLoadingMore(true);
-    // Mark as new session because data has changed/expanded
-    setCurrentHistoryId(null); 
+    // CRITICAL FIX: Do NOT reset currentHistoryId here. 
+    // We want to continue the current session so that "End Session" updates the existing history item.
     
     try {
       const existingNames = searchState.data.map(b => b.name);

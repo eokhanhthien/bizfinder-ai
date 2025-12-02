@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, History, PieChart, Download, Trash2, Clock, MapPin, List, Table as TableIcon, LayoutGrid } from 'lucide-react';
+import { X, History, PieChart, Download, Trash2, Clock, MapPin, List, Table as TableIcon, LayoutGrid, Plus } from 'lucide-react';
 import { SortOption, HistoryItem } from '../types';
 
 interface Props {
@@ -35,6 +35,12 @@ const Sidebar: React.FC<Props> = ({
   onDeleteHistory,
   // onClearAllHistory is no longer used in UI
 }) => {
+  
+  const handleNewSearch = () => {
+    onClearData();
+    onClose();
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -49,8 +55,12 @@ const Sidebar: React.FC<Props> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            <div className="bg-[#005993] p-1.5 rounded-lg">
+          <div 
+            onClick={handleNewSearch}
+            className="flex items-center gap-2 cursor-pointer group select-none"
+            title="Start New Search"
+          >
+            <div className="bg-[#005993] p-1.5 rounded-lg group-active:scale-95 transition-transform">
               <LayoutGrid className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-[#005993] text-lg">Menu</span>
@@ -67,6 +77,14 @@ const Sidebar: React.FC<Props> = ({
           {/* Current Session Tools */}
           {count > 0 && (
             <div className="p-5 border-b border-slate-100 animate-in slide-in-from-left-2 duration-300">
+              
+              <button 
+                onClick={handleNewSearch}
+                className="w-full flex items-center justify-center gap-2 p-3.5 mb-6 bg-[#005993] text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-900/20 active:bg-[#004d7a] transition-all active:scale-95"
+              >
+                <Plus className="w-4 h-4" /> Tìm kiếm mới
+              </button>
+
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Current Session</h3>
               
               <div className="space-y-4">
@@ -120,13 +138,6 @@ const Sidebar: React.FC<Props> = ({
                     <span className="text-xs font-bold text-slate-600">Excel</span>
                   </button>
                 </div>
-
-                <button 
-                  onClick={onClearData}
-                  className="w-full flex items-center justify-center gap-2 p-3.5 bg-red-50 text-[#D71249] font-bold text-sm rounded-xl border border-red-100 active:bg-red-600 active:text-white transition-all active:scale-95 shadow-sm"
-                >
-                  <Trash2 className="w-4 h-4" /> End Session & Reset
-                </button>
               </div>
             </div>
           )}

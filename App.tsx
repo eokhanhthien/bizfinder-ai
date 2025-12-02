@@ -213,11 +213,13 @@ const App: React.FC = () => {
     try {
       const existingNames = searchState.data.map(b => b.name);
       const newResults = await fetchBusinessData(industry, mainLocation, existingNames);
+      
       if (newResults.length === 0) {
-        alert("No additional unique businesses found for this query.");
+        alert("Found all available businesses in this specific area. Try expanding your location search (e.g., Change 'District 1' to 'Ho Chi Minh City').");
         setIsLoadingMore(false);
         return;
       }
+
       const currentMap = new Map<string, Business>();
       searchState.data.forEach(b => currentMap.set(b.googleMapsUri || `${b.name}|${b.address}`, b));
       let addedCount = 0;
@@ -226,10 +228,16 @@ const App: React.FC = () => {
           if (!currentMap.has(key)) { currentMap.set(key, biz); addedCount++; }
       });
       setSearchState(prev => ({ ...prev, data: Array.from(currentMap.values()) }));
-      if (addedCount === 0) alert("The AI returned businesses that were already in your list.");
+      
+      if (addedCount === 0) {
+         // Soft notification instead of harsh error
+         console.warn("The AI returned duplicates.");
+         alert("All businesses found in this area are already in your list. Try a slightly different location name.");
+      }
+
     } catch (e) {
       console.error(e);
-      alert("Failed to load more results.");
+      alert("Unable to load more results. Please check your connection.");
     } finally {
       setIsLoadingMore(false);
     }

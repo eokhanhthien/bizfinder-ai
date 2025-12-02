@@ -46,7 +46,19 @@ export const fetchBusinessData = async (
   try {
     // Construct exclusion text if there are existing businesses
     const exclusionInstruction = excludeNames.length > 0 
-      ? `CRITICAL EXCLUSION LIST: You must NOT include these businesses (we already have them): ${JSON.stringify(excludeNames)}. Find DIFFERENT businesses.`
+      ? `
+        CONTEXT: We have already identified ${excludeNames.length} businesses in this area.
+        EXCLUSION LIST: ${JSON.stringify(excludeNames)}.
+        
+        CRITICAL INSTRUCTION FOR "LOAD MORE":
+        1. You MUST NOT return any business present in the Exclusion List.
+        2. You MUST find 20 NEW businesses.
+        3. STRATEGY: 
+           - Look for "Hidden Gems", local favorites, or smaller establishments.
+           - Search in ALLEYS (Hẻm/Ngõ), intersecting streets, or nearby wards.
+           - Do not limit to just "Top Rated". Find businesses with fewer reviews too.
+           - If the exact location is exhausted, expand the search radius slightly to immediate surroundings.
+      `
       : "";
 
     // IMPROVED PROMPT: Deep Mining Mode
@@ -57,7 +69,7 @@ export const fetchBusinessData = async (
       SEARCH STRATEGY (Must Follow):
       1. **Semantic Expansion**: Do not just search for the exact keyword "${industry}". 
          - Use synonyms (e.g., if "Cafe", also look for "Coffee Shop", "Espresso Bar", "Bistro", "Tea House").
-         - If "Bách hoá", look for "Supermarket", "Convenience Store", "Mini-mart".
+         - If "Bách hoá", look for "Supermarket", "Convenience Store", "Mini-mart", "Grocery Store".
       2. **Geographic Diversity**: Do not just list the famous spots in the center. Look for businesses on different streets within "${location}".
       3. **Quantity over Fame**: We need volume. Include small businesses, new openings, and local favorites, not just the top-rated ones.
 

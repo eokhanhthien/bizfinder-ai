@@ -1,0 +1,5 @@
+{
+  "name": "BizFinder AI",
+  "description": "A powerful business intelligence tool that uses Gemini AI and Google Maps Grounding to extract business lists, ratings, and contact info instantly, replacing fragile manual scrapers.",
+  "requestFramePermissions": []
+}

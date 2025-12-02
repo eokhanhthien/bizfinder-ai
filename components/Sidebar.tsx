@@ -82,7 +82,7 @@ const Sidebar: React.FC<Props> = ({
                 onClick={handleNewSearch}
                 className="w-full flex items-center justify-center gap-2 p-3.5 mb-6 bg-[#005993] text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-900/20 active:bg-[#004d7a] transition-all active:scale-95"
               >
-                <Plus className="w-4 h-4" /> Tìm kiếm mới
+                <Plus className="w-4 h-4" /> New search
               </button>
 
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Current Session</h3>

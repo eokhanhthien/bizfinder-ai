@@ -366,7 +366,7 @@ const App: React.FC = () => {
                           id="location"
                           value={mainLocation}
                           onChange={(e) => setMainLocation(e.target.value)}
-                          placeholder="e.g. District 1"
+                          placeholder="e.g. Cà Mau"
                           className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#7ED3F7] focus:border-[#005993] outline-none transition-all text-black font-semibold text-sm placeholder:text-slate-400 placeholder:font-normal"
                         />
                     </div>

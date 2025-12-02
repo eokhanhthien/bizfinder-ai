@@ -25,7 +25,7 @@ const Header: React.FC<Props> = ({ onOpenSidebar }) => {
                 BizFinder
               </span>
               <span className="text-[10px] font-medium text-slate-400 tracking-wider uppercase mt-0.5">
-                Intelligence
+                Intelligence - thiendk
               </span>
             </div>
           </div>

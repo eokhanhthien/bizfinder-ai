@@ -32,7 +32,13 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Track if current session is from history to prevent duplicates
-  const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
+  // FIX: Restore ID from localStorage so we don't lose context on page reload
+  const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('bizFinder_currentHistoryId');
+    }
+    return null;
+  });
 
   // Data State
   const [searchState, setSearchState] = useState<SearchState>(() => {
@@ -68,6 +74,15 @@ const App: React.FC = () => {
   useEffect(() => localStorage.setItem('bizFinder_location', mainLocation), [mainLocation]);
   useEffect(() => localStorage.setItem('bizFinder_viewMode', viewMode), [viewMode]);
   
+  // FIX: Persist currentHistoryId so context is saved across reloads
+  useEffect(() => {
+    if (currentHistoryId) {
+      localStorage.setItem('bizFinder_currentHistoryId', currentHistoryId);
+    } else {
+      localStorage.removeItem('bizFinder_currentHistoryId');
+    }
+  }, [currentHistoryId]);
+
   // Save current data state
   useEffect(() => {
     if (searchState.data.length > 0) localStorage.setItem('bizFinder_data', JSON.stringify(searchState.data));
@@ -114,11 +129,6 @@ const App: React.FC = () => {
         data: searchState.data
       };
       
-      // We also update the current ID to track this new item immediately
-      // This side-effect inside setState callback is safe for logic but setCurrentHistoryId 
-      // should ideally be called outside. However, since this is "save", we might be clearing right after.
-      // But if we are NOT clearing (e.g. auto-save), we need to know we are now tracking this ID.
-      // We'll handle setCurrentHistoryId separately if needed, but for "End Session" it doesn't matter.
       return [newItem, ...prev];
     });
   }, [searchState.data, currentHistoryId, industry, mainLocation]);
@@ -137,6 +147,7 @@ const App: React.FC = () => {
     setCurrentHistoryId(null);
     localStorage.removeItem('bizFinder_industry');
     localStorage.removeItem('bizFinder_location');
+    // localStorage.removeItem('bizFinder_currentHistoryId'); // Handled by useEffect
 
     // UI Updates
     setShowAnalytics(false);
@@ -201,7 +212,12 @@ const App: React.FC = () => {
         const results = await fetchBusinessData(industry, mainLocation, []);
         setSearchState(prev => ({ ...prev, data: results, isSearching: false, progress: undefined }));
     } catch (error: any) {
-      setSearchState(prev => ({ ...prev, isSearching: false, error: error.message || "An unexpected error occurred", progress: undefined }));
+      let errorMessage = error.message || "An unexpected error occurred";
+      // Handle Authentication Errors clearly
+      if (errorMessage.includes("API key") || errorMessage.includes("403")) {
+          errorMessage = "API Key Error: Key is invalid, expired or revoked. Please update your settings.";
+      }
+      setSearchState(prev => ({ ...prev, isSearching: false, error: errorMessage, progress: undefined }));
     }
   }, [industry, mainLocation, searchState.data, saveCurrentSession]);
 
@@ -235,9 +251,13 @@ const App: React.FC = () => {
          alert("All businesses found in this area are already in your list. Try a slightly different location name.");
       }
 
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Unable to load more results. Please check your connection.");
+      let msg = "Unable to load more results. Please check your connection.";
+      if (e.message?.includes("API key") || e.toString().includes("403")) {
+        msg = "API Key Error: Key is invalid or has been revoked.";
+      }
+      alert(msg);
     } finally {
       setIsLoadingMore(false);
     }
@@ -353,7 +373,7 @@ const App: React.FC = () => {
         {/* Error State */}
         {searchState.error && (
           <div className="bg-red-50 text-[#D71249] p-4 rounded-2xl border border-red-100 mb-6 flex items-start gap-3 animate-in fade-in slide-in-from-top-4">
-            <div className="w-2 h-2 rounded-full bg-[#D71249] mt-2" />
+            <div className="w-2 h-2 rounded-full bg-[#D71249] mt-2 shrink-0" />
             <span className="text-sm font-medium">{searchState.error}</span>
           </div>
         )}

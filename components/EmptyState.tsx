@@ -15,7 +15,7 @@ const EmptyState: React.FC = () => {
       </div>
       <h2 className="text-2xl font-bold text-[#005993] mb-2">Ready to explore</h2>
       <p className="text-slate-500 max-w-md">
-        Enter a business type and location to start. The system will extract real-time data from Google Maps.
+        Enter a business type and location to start. The system will extract real-time Data.
       </p>
     </div>
   );

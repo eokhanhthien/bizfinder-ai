@@ -215,7 +215,16 @@ const App: React.FC = () => {
     // Start FRESH session for new search
     setCurrentHistoryId(null);
 
-    setSearchState(prev => ({ ...prev, isSearching: true, error: null, hasSearched: true, progress: { current: 1, total: 1, currentArea: mainLocation } }));
+    // FIX: Clear data to [] to show Initial Loading Skeleton correctly
+    setSearchState(prev => ({ 
+      ...prev, 
+      isSearching: true, 
+      error: null, 
+      hasSearched: true, 
+      progress: { current: 1, total: 1, currentArea: mainLocation },
+      data: [] 
+    }));
+
     try {
         const results = await fetchBusinessData(industry, mainLocation, []);
         setSearchState(prev => ({ ...prev, data: results, isSearching: false, progress: undefined }));
@@ -413,11 +422,39 @@ const App: React.FC = () => {
                 {sortedData.map((biz) => (
                   <BusinessCard key={biz.id} data={biz} />
                 ))}
+                
+                {/* List View Skeletons (Show during Load More OR Initial Search) */}
+                {(isLoadingMore || searchState.isSearching) && [1, 2, 3, 4].map((i) => (
+                  <div key={`skel-${i}`} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm h-full animate-pulse">
+                    <div className="flex justify-between items-start mb-3 gap-3">
+                      <div className="h-6 bg-slate-200 rounded-md w-3/4"></div>
+                      <div className="h-6 bg-slate-200 rounded-lg w-12 shrink-0"></div>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className="h-3 bg-slate-200 rounded w-full"></div>
+                      <div className="h-3 bg-slate-200 rounded w-5/6"></div>
+                    </div>
+                    <div className="space-y-3 mb-5">
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0"></div>
+                         <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0"></div>
+                         <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                      </div>
+                    </div>
+                    <div className="mt-auto pt-4 border-t border-slate-50 flex justify-between items-center gap-4">
+                       <div className="h-4 bg-slate-200 rounded w-20"></div>
+                       <div className="h-8 bg-slate-200 rounded-xl w-32"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
             {/* View: Table */}
-            {viewMode === 'table' && sortedData.length > 0 && (
+            {viewMode === 'table' && (sortedData.length > 0 || isLoadingMore || searchState.isSearching) && (
               <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden mb-20">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm text-slate-600 min-w-[600px]">
@@ -463,6 +500,29 @@ const App: React.FC = () => {
                                   <ExternalLink className="w-4 h-4" />
                                 </a>
                              )}
+                          </td>
+                        </tr>
+                      ))}
+                      
+                      {/* Table View Skeletons (Show during Load More OR Initial Search) */}
+                      {(isLoadingMore || searchState.isSearching) && [1, 2, 3, 4].map((i) => (
+                        <tr key={`skel-row-${i}`} className="animate-pulse">
+                          <td className="px-4 py-4">
+                             <div className="h-5 bg-slate-200 rounded w-48 mb-1"></div>
+                             <div className="h-3 bg-slate-100 rounded w-24"></div>
+                          </td>
+                          <td className="px-4 py-4">
+                             <div className="h-5 bg-slate-200 rounded w-12"></div>
+                          </td>
+                          <td className="px-4 py-4">
+                             <div className="h-4 bg-slate-200 rounded w-32"></div>
+                          </td>
+                          <td className="px-4 py-4">
+                             <div className="h-3 bg-slate-200 rounded w-24 mb-1"></div>
+                             <div className="h-3 bg-slate-100 rounded w-16"></div>
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                             <div className="inline-block h-8 w-8 bg-slate-200 rounded-lg"></div>
                           </td>
                         </tr>
                       ))}
